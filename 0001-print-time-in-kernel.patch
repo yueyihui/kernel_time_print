@@ -1,0 +1,71 @@
+From 45ac438a865ddb42bf00c161b6c64e6d7068f8fa Mon Sep 17 00:00:00 2001
+From: "Yue, Liang" <liang.yue@cienet.com.cn>
+Date: Wed, 4 Apr 2018 15:37:31 +0800
+Subject: [PATCH] print time in kernel
+
+---
+ linux-3.10/drivers/tty/serial/sunxi-uart.c | 28 +++++++++++++++++++++++++---
+ 1 file changed, 25 insertions(+), 3 deletions(-)
+
+diff --git a/linux-3.10/drivers/tty/serial/sunxi-uart.c b/linux-3.10/drivers/tty/serial/sunxi-uart.c
+index 6cc328d..b2cabb3 100755
+--- a/linux-3.10/drivers/tty/serial/sunxi-uart.c
++++ b/linux-3.10/drivers/tty/serial/sunxi-uart.c
+@@ -39,7 +39,9 @@
+ #include <linux/of.h>
+ #include <linux/of_irq.h>
+ #include <linux/of_address.h>
+-
++#include <linux/timer.h>
++#include <linux/timex.h>
++#include <linux/rtc.h>
+ #include "sunxi-uart.h"
+ 
+ //#define CONFIG_SW_UART_DUMP_DATA
+@@ -140,7 +142,20 @@ static unsigned int sw_uart_handle_rx(struct sw_uart_port *sw_uport, unsigned in
+ 	unsigned char ch = 0;
+ 	int max_count = 256;
+ 	char flag;
+-
++	struct timex  txc;
++	struct rtc_time tm;
++	if (sw_uport->id==3)
++	{
++		do_gettimeofday(&(txc.time));
++		rtc_time_to_tm(txc.time.tv_sec,&tm);
++		printk("tty3 time min:sec:usec :%d:%d:%d\n",tm.tm_min,tm.tm_sec,txc.time.tv_usec);
++	}
++	if (sw_uport->id==4)
++	{
++		do_gettimeofday(&(txc.time));
++		rtc_time_to_tm(txc.time.tv_sec,&tm);
++		printk("tty4 time min:sec:usec :%d:%d:%d\n",tm.tm_min,tm.tm_sec,txc.time.tv_usec);
++	}
+ 	do {
+ 		if (likely(lsr & SUNXI_UART_LSR_DR)) {
+ 			ch = serial_in(&sw_uport->port, SUNXI_UART_RBR);
+@@ -603,13 +618,20 @@ static unsigned int sw_uart_get_mctrl(struct uart_port *port)
+ static void sw_uart_stop_rx(struct uart_port *port)
+ {
+ 	struct sw_uart_port *sw_uport = UART_TO_SPORT(port);
+-
+ 	if (sw_uport->ier & SUNXI_UART_IER_RLSI) {
+ 		sw_uport->ier &= ~SUNXI_UART_IER_RLSI;
+ 		SERIAL_DBG("stop rx, ier %x\n", sw_uport->ier);
+ 		sw_uport->port.read_status_mask &= ~SUNXI_UART_LSR_DR;
+ 		serial_out(port, sw_uport->ier, SUNXI_UART_IER);
+ 	}
++	if(sw_uport->id==3)
++	{
++		printk("3 %s\n", __func__);
++	}
++	if(sw_uport->id==4)
++	{
++		printk("4 %s\n", __func__);
++	}
+ }
+ 
+ static void sw_uart_enable_ms(struct uart_port *port)
+-- 
+1.9.1
+
